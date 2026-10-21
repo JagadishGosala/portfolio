@@ -133,7 +133,8 @@ section.block { padding-block: 84px; border-bottom: 1px solid var(--edge); posit
 .file-head .hud { color: var(--arc); font-size: .82rem; }
 .file-head h2 { font: 400 clamp(2.2rem, 5vw, 3.8rem)/.95 var(--display); text-transform: uppercase; letter-spacing: .01em; }
 .file-head p { grid-column: 2; color: var(--muted); max-width: 44em; font-size: 1.06rem; margin-top: 6px; }
-@media (max-width: 600px) { .file-head { grid-template-columns: minmax(0, 1fr); } .file-no { grid-row: auto; } .file-head p { grid-column: 1; } }
+.file-head .fh-cta { grid-column: 2; margin-top: 14px; }
+@media (max-width: 600px) { .file-head { grid-template-columns: minmax(0, 1fr); } .file-no { grid-row: auto; } .file-head p, .file-head .fh-cta { grid-column: 1; } }
 
 .case { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 44px; align-items: start; }
 @media (max-width: 960px) { .case { grid-template-columns: minmax(0, 1fr); gap: 28px; } }
@@ -240,7 +241,7 @@ footer { padding-block: 28px 44px; color: var(--muted); font-size: .82rem; }
         <div class="callsign hud">Full-stack engineer · Hyderabad</div>
         <h1><span class="l1">Jagadish</span><span class="l2">Gosala</span></h1>
         <p class="tagline">I build the systems that make LLM features cheap, safe and measurable.</p>
-        <p class="lede">Five years across backend, data and product engineering. At <strong>Provakil</strong> I lead a 4–6 engineer team, built the company-wide <strong>LLM gateway</strong>, and scaled our analytics pipeline <strong>6x</strong>. Off duty I'm building a <strong>RAG research assistant</strong> over Indian Supreme Court judgments.</p>
+        <p class="lede">Five years across backend, data and product engineering. At <strong>Provakil</strong> I lead a 6-engineer team, built the company-wide <strong>LLM gateway</strong>, and scaled our analytics pipeline <strong>6x</strong>. Off duty I built and shipped a <strong>RAG research assistant</strong> over 11,000 Indian Supreme Court judgments.</p>
         <div class="cta-row">
           <a class="btn primary" href="#gateway">Open mission files</a>
           <a class="btn" href="resume.pdf" target="_blank" rel="noopener">Resume (PDF)</a>
@@ -352,40 +353,51 @@ footer { padding-block: 28px 44px; color: var(--muted); font-size: .82rem; }
     <div class="wrap">
       <div class="file-head">
         <span class="file-no" aria-hidden="true">02</span>
-        <span class="hud">Mission file · personal project · in active development</span>
+        <span class="hud">Mission file · personal project · live</span>
         <h2 id="ragTitle">Find the paragraph that wins the case</h2>
-        <p>A retrieval-augmented assistant over Indian Supreme Court judgments, built to answer with citations like <em>Pappu v. Vinod Kumar Lamba</em>, [2018] 1 S.C.R. 195, para 15, linked to that exact paragraph.</p>
+        <p>A research assistant over 11,018 Indian Supreme Court judgments. Ask a legal question or describe your facts, and it answers with citations like <em>Pappu v. Vinod Kumar Lamba</em>, [2018] 1 S.C.R. 195, para 15, linked to that exact paragraph.</p>
+        <div class="cta-row fh-cta">
+          <a class="btn primary" href="https://legal-case-research-assistant.vercel.app/" target="_blank" rel="noopener">Try it live</a>
+        </div>
       </div>
       <div class="case">
         <div class="prose">
           <div>
             <h3>Clean paragraphs from court reporters</h3>
-            <p>Supreme Court Reports PDFs carry margin letters A–H on every page, editor headnotes, running heads and OCR typos. My ingestion pipeline drops margin letters by their geometry, splits headnotes from the judgment, and follows paragraph numbering through OCR misreads. <strong>Numbered-paragraph detection went from 66% to 96%</strong> of judgments.</p>
+            <p>Supreme Court Reports PDFs carry margin letters A–H on every page, editor headnotes, running heads and OCR typos. My ingestion pipeline drops margin letters by their geometry, splits headnotes from the judgment, and follows paragraph numbering through OCR misreads. Across all 11,018 judgments from 2012–2025, <strong>numbered-paragraph detection went from 66% to 98.2%</strong>, with no failed extractions.</p>
           </div>
           <div>
-            <h3>Hybrid search, measured</h3>
-            <p>BGE-M3 dense vectors and BM25 sparse vectors in Qdrant, fused with reciprocal rank fusion. A two-stage citation mode picks judgments using the headnotes, then picks paragraphs inside them. Every model sits behind a provider interface, so local Ollama and hosted inference swap by configuration.</p>
+            <h3>Hybrid search, then cited answers</h3>
+            <p>BGE-M3 dense vectors and BM25 sparse vectors in Qdrant, fused with reciprocal rank fusion. A two-stage citation mode picks judgments using the headnotes, then picks paragraphs inside them. Answers stream from Groq's gpt-oss-120b, falling back to Workers AI Llama 3.3 70B only before the first token, and every [n] citation is checked against the excerpts the model was given.</p>
+          </div>
+          <div>
+            <h3>Case analysis</h3>
+            <p>Describe your facts and an LLM plans the legal issues and search queries. Results from several queries are fused, and a second call writes a research note: similar cases and how they ended for your side, the arguments courts accepted and rejected, and the points the cases don't decide.</p>
           </div>
           <div>
             <h3>Calls the eval made</h3>
             <ul>
-              <li><strong>Dropped the cross-encoder reranker.</strong> Over 10 seconds on CPU with no gain in finding the right judgment.</li>
-              <li><strong>Query latency from 375 ms to 37 ms</strong> by fixing query-time embedding.</li>
-              <li><strong>Sized for ₹0 a month:</strong> float16 vectors on disk plus an int8 copy in RAM project the ~10K-judgment corpus to about 2.9 GB of the 4 GB free tier.</li>
+              <li><strong>Faithfulness from 0.70 to 93% of answers fully faithful</strong> (judged by a second LLM) after adding an attribution rule and passing whole excerpts.</li>
+              <li><strong>Dropped the cross-encoder reranker.</strong> On the full corpus it scored no better (MRR 0.741 vs 0.752) and took 4.6 s per query.</li>
+              <li><strong>Query latency from 375 ms to 37 ms</strong> by pooling connections to the embedding model.</li>
             </ul>
           </div>
-          <div class="results">
-            <div class="result holo"><b>19,914</b><span>paragraph chunks from 500 judgments</span></div>
-            <div class="result holo"><b>0.953</b><span>MRR@10 on a 50-question golden set</span></div>
+          <div>
+            <h3>Production at ₹0 a month</h3>
+            <p>Vercel, Render, Qdrant Cloud, Neon and Upstash free tiers. Redis quotas, a 7-day answer cache and rate limits keep it inside the free model limits. Alembic migrations, JSON logs with request IDs, and GitHub Actions CI with strict mypy, 100 pytest tests and Playwright end-to-end tests.</p>
           </div>
-          <div class="gear"><span>Python</span><span>FastAPI</span><span>Qdrant</span><span>PostgreSQL</span><span>BGE-M3</span><span>BM25</span><span>PyMuPDF</span><span>Ollama</span><span>Next.js</span><span>Docker Compose</span></div>
+          <div class="results">
+            <div class="result holo"><b>432,881</b><span>paragraph chunks from 11,018 judgments</span></div>
+            <div class="result holo"><b>1.0</b><span>citation precision: every citation points to a real excerpt</span></div>
+          </div>
+          <div class="gear"><span>Python</span><span>FastAPI</span><span>Qdrant</span><span>PostgreSQL</span><span>Redis</span><span>BGE-M3</span><span>BM25</span><span>Groq</span><span>Workers AI</span><span>Next.js</span><span>Vercel AI SDK</span><span>GitHub Actions</span><span>Playwright</span></div>
         </div>
         <div class="figure holo">
           <h4>Retrieval eval by search mode</h4>
-          <p class="cap">50 hand-written questions over a 500-judgment index. Paragraph hit counts the 35 questions with gold paragraphs.</p>
+          <p class="cap">50 hand-written questions over the full 11K-judgment index, one accepted judgment per question, so other valid precedents count as misses. Paragraph hit counts the 35 questions with gold paragraphs.</p>
           <div class="tabs" role="group" aria-label="Metric">
             <button class="tab" type="button" data-m="mrr" aria-pressed="true">MRR@10</button>
-            <button class="tab" type="button" data-m="doc3" aria-pressed="false">Judgment in top 3</button>
+            <button class="tab" type="button" data-m="doc5" aria-pressed="false">Judgment in top 5</button>
             <button class="tab" type="button" data-m="para3" aria-pressed="false">Paragraph in top 3</button>
             <button class="tab" type="button" data-m="ms" aria-pressed="false">p50 latency</button>
           </div>
@@ -432,11 +444,11 @@ footer { padding-block: 28px 44px; color: var(--muted); font-size: .82rem; }
         </div>
         <div class="power holo">
           <svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="6" fill="var(--gold)"/><circle cx="20" cy="20" r="13" fill="none" stroke="var(--arc)" stroke-width="2" stroke-dasharray="4 4"/><path d="M20 2 V8 M20 32 V38 M2 20 H8 M32 20 H38" stroke="var(--arc)" stroke-width="2"/></svg>
-          <h3>AI and retrieval</h3><div class="gear"><span>RAG</span><span>Hybrid search</span><span>BGE-M3</span><span>Ollama</span><span>Presidio</span><span>Retrieval evaluation</span></div>
+          <h3>AI and retrieval</h3><div class="gear"><span>RAG</span><span>Hybrid search</span><span>BGE-M3</span><span>Ollama</span><span>Presidio</span><span>Retrieval evaluation</span><span>LLM-as-judge evals</span></div>
         </div>
         <div class="power holo">
           <svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M8 12 L16 20 L8 28" fill="none" stroke="var(--arc)" stroke-width="2.5"/><path d="M19 29 H32" stroke="var(--gold)" stroke-width="3"/></svg>
-          <h3>AI coding agents and APIs</h3><div class="gear"><span>Claude Code</span><span>Claude</span><span>OpenAI Codex</span><span>GitHub Copilot</span><span>Gemini API</span><span>DeepSeek API</span></div>
+          <h3>AI coding agents and APIs</h3><div class="gear"><span>Claude Code</span><span>Claude</span><span>OpenAI Codex</span><span>GitHub Copilot</span><span>Gemini API</span><span>DeepSeek API</span><span>Groq</span><span>Workers AI</span></div>
         </div>
         <div class="power holo">
           <svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="7" width="30" height="22" fill="none" stroke="var(--arc)" stroke-width="2"/><path d="M5 13 H35" stroke="var(--arc)" stroke-width="2"/><rect x="10" y="17" width="9" height="8" fill="var(--gold)"/><path d="M14 33 H26" stroke="var(--arc)" stroke-width="2"/></svg>
@@ -444,7 +456,7 @@ footer { padding-block: 28px 44px; color: var(--muted); font-size: .82rem; }
         </div>
         <div class="power holo">
           <svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 L34 12 V28 L20 36 L6 28 V12 Z" fill="none" stroke="var(--arc)" stroke-width="2"/><path d="M6 12 L20 20 L34 12 M20 20 V36" fill="none" stroke="var(--gold)" stroke-width="2"/></svg>
-          <h3>Infrastructure</h3><div class="gear"><span>Docker</span><span>RabbitMQ</span><span>AWS S3, EC2</span><span>MinIO</span><span>Supabase</span><span>Vercel</span><span>WebSockets</span><span>CI/CD</span></div>
+          <h3>Infrastructure</h3><div class="gear"><span>Docker</span><span>RabbitMQ</span><span>AWS S3, EC2</span><span>MinIO</span><span>Supabase</span><span>Vercel</span><span>Render</span><span>Neon</span><span>Upstash</span><span>WebSockets</span><span>GitHub Actions</span></div>
         </div>
       </div>
     </div>
@@ -463,7 +475,7 @@ footer { padding-block: 28px 44px; color: var(--muted); font-size: .82rem; }
           <div>
             <h3>Provakil</h3>
             <div class="role">Software Developer, Team Lead</div>
-            <p>Enterprise legal-tech SaaS for banks and insurers. I lead a 4–6 engineer team that owns the analytics platform end to end, covering architecture, design and code review, on-call, hiring and mentoring. I also own the LLM gateway and several applied-AI features.</p>
+            <p>Enterprise legal-tech SaaS for banks and insurers. I lead a 6-engineer team that owns the analytics platform end to end, covering architecture, design and code review, on-call, hiring and mentoring. I also own the LLM gateway and several applied-AI features.</p>
           </div>
         </div>
         <div class="op holo">
@@ -582,19 +594,18 @@ footer { padding-block: 28px 44px; color: var(--muted); font-size: .82rem; }
   document.getElementById('routeBtn').addEventListener('click', run);
   document.getElementById('team').addEventListener('change', function () { document.getElementById('walletBar').style.width = wallets[this.value] + '%'; });
 
-  // eval chart (apps/api/eval/results, 18 Oct 2026)
+  // eval chart: full 11K-judgment index, golden v1 (apps/api/eval/results, 19 Oct 2026)
   var data = [
-    { mode: 'dense', mrr: .911, doc3: .94, para3: .46, ms: 37 },
-    { mode: 'sparse', mrr: .952, doc3: .98, para3: .43, ms: 7 },
-    { mode: 'hybrid', mrr: .947, doc3: .98, para3: .46, ms: 37 },
-    { mode: 'hybrid+rerank', mrr: .943, doc3: .96, para3: .51, ms: 10780 },
-    { mode: 'hybrid_cite', mrr: .953, doc3: 1.00, para3: .60, ms: 46 }
+    { mode: 'dense', mrr: .598, doc5: .76, para3: .23, ms: 38 },
+    { mode: 'sparse', mrr: .759, doc5: .88, para3: .31, ms: 8 },
+    { mode: 'hybrid', mrr: .742, doc5: .92, para3: .29, ms: 41 },
+    { mode: 'hybrid_cite', mrr: .751, doc5: .92, para3: .43, ms: 53 }
   ];
   var notes = {
-    mrr: 'Mean reciprocal rank of the correct judgment. The two-stage citation mode leads at 0.953. Bars start at 0.85 so the differences are visible.',
-    doc3: 'Share of questions with the correct judgment in the top 3. The citation mode finds it every time. Bars start at 0.85.',
-    para3: 'Share of pinpoint questions where a top-3 hit covers a gold paragraph, up from 0.46 to 0.60.',
-    ms: 'Median search latency on a laptop, log scale; shorter is better. The CPU reranker took 10.8 s with no gain, so it was dropped.'
+    mrr: 'Mean reciprocal rank of the accepted judgment. Keywords and the citation mode are close; meaning-only search falls behind on a large corpus. Bars start at 0.5.',
+    doc5: 'Share of questions with the accepted judgment in the top 5. Hybrid and the citation mode find it 92% of the time. Bars start at 0.5.',
+    para3: 'Share of pinpoint questions where a top-3 hit covers a gold paragraph. The citation mode lifts it from 0.29 to 0.43, which is what the answers cite.',
+    ms: 'Median search latency, log scale; shorter is better. A cross-encoder reranker added 4.6 s with no gain, so it was dropped.'
   };
   var bars = document.getElementById('bars');
   bars.innerHTML = data.map(function (d) { return '<div class="bar"><span class="lab">' + d.mode + '</span><span class="track"><span class="fill"></span></span><span class="val"></span></div>'; }).join('');
@@ -602,9 +613,9 @@ footer { padding-block: 28px 44px; color: var(--muted); font-size: .82rem; }
     var rows = bars.querySelectorAll('.bar');
     if (metric === 'ms') {
       var max = Math.log10(11000);
-      data.forEach(function (d, i) { rows[i].querySelector('.fill').style.width = Math.max(3, Math.log10(d.ms) / max * 100) + '%'; rows[i].querySelector('.val').textContent = d.ms >= 1000 ? (d.ms / 1000).toFixed(1) + ' s' : d.ms + ' ms'; rows[i].classList.toggle('best', i === 4); });
+      data.forEach(function (d, i) { rows[i].querySelector('.fill').style.width = Math.max(3, Math.log10(d.ms) / max * 100) + '%'; rows[i].querySelector('.val').textContent = d.ms >= 1000 ? (d.ms / 1000).toFixed(1) + ' s' : d.ms + ' ms'; rows[i].classList.toggle('best', i === 3); });
     } else {
-      var top = Math.max.apply(null, data.map(function (d) { return d[metric]; })), lo = metric === 'para3' ? 0 : 0.85;
+      var top = Math.max.apply(null, data.map(function (d) { return d[metric]; })), lo = metric === 'para3' ? 0 : 0.5;
       data.forEach(function (d, i) { rows[i].querySelector('.fill').style.width = ((d[metric] - lo) / (1 - lo) * 100) + '%'; rows[i].querySelector('.val').textContent = d[metric].toFixed(metric === 'mrr' ? 3 : 2); rows[i].classList.toggle('best', d[metric] === top); });
     }
     document.getElementById('chartNote').textContent = notes[metric];
